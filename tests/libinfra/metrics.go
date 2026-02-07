@@ -39,13 +39,13 @@ import (
 type MetricsGetter func(vmi *v1.VirtualMachineInstance) (*api.Metrics, error)
 
 func GetDownwardMetricsDisk(vmi *v1.VirtualMachineInstance) (*api.Metrics, error) {
-	cmd := `sudo vm-dump-metrics 2> /dev/null`
-	return runAndCheckDumpMetrics(vmi, cmd)
+	command := `sudo vm-dump-metrics 2> /dev/null`
+	return runAndCheckDumpMetrics(vmi, command)
 }
 
 func GetDownwardMetricsVirtio(vmi *v1.VirtualMachineInstance) (*api.Metrics, error) {
-	cmd := `sudo vm-dump-metrics --virtio 2> /dev/null`
-	return runAndCheckDumpMetrics(vmi, cmd)
+	command := `sudo vm-dump-metrics --virtio 2> /dev/null`
+	return runAndCheckDumpMetrics(vmi, command)
 }
 
 func runAndCheckDumpMetrics(vmi *v1.VirtualMachineInstance, cmd string) (*api.Metrics, error) {
