@@ -1,0 +1,119 @@
+name: Request CodeRabbit commit analysis
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to analyze'
+        required: true
+        type: string
+
+permissions:
+  pull-requests: write
+  contents: read
+  issues: write
+
+jobs:
+  analyze-commits:
+    # Run if: manual trigger OR (PR comment contains /analyze-commits and not from renovate)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+       contains(github.event.comment.body, '/analyze-commits') &&
+       !contains(github.event.comment.user.login, 'renovate'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post comment to CodeRabbit
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Determine PR number from event type
+            let prNumber;
+            if (github.event_name === 'workflow_dispatch') {
+              prNumber = parseInt(github.event.inputs.pr_number);
+              console.log('Manual trigger for PR:', prNumber);
+            } else {
+              // Debug: Log the comment body to see what we received
+              const userComment = context.payload.comment.body.trim();
+              console.log('User comment body:', userComment);
+              console.log('Issue number:', context.issue.number);
+              console.log('Is PR:', !!context.payload.issue.pull_request);
+              console.log('User login:', context.payload.comment.user.login);
+              
+              // Double-check the condition (in case the workflow condition didn't work as expected)
+              if (!context.payload.issue.pull_request) {
+                console.log('Not a PR comment, skipping');
+                return;
+              }
+              
+              if (!userComment.includes('/analyze-commits')) {
+                console.log('Comment does not contain /analyze-commits, skipping');
+                return;
+              }
+              
+              prNumber = context.issue.number;
+            }
+            
+            if (!prNumber) {
+              console.log('No PR number found, skipping');
+              return;
+            }
+            
+            const codeRabbitComment = `@coderabbitai
+            <details>
+              <summary>Commit message analysis request</summary>
+              
+              CRITICAL: You MUST post a comment analyzing the commit messages in this PR.
+              Analyze all commits in this pull request (up to 20 commits, or all if fewer than 20).
+              
+              ## Instructions
+              
+              Please analyze all commit messages in this PR for:
+              
+              1. **Format compliance** - Check if commit messages follow common patterns (in order of preference):
+                 - Component prefix pattern (~80%): \`component: description\` or \`component1, component2: description\`
+                   Example: \`network: Add support for SR-IOV interfaces\`
+                 - Capitalized component prefix (~10%): \`Component: Description\`
+                   Example: \`Network: Add support for SR-IOV interfaces\`
+                 - Conventional commits (~5%): \`type(scope): description\` or \`type: description\`
+                   Example: \`feat(network): Add support for SR-IOV interfaces\`
+                 - No prefix (~5%): Acceptable but less common - Direct description starting with capital letter
+                   Example: \`Add support for SR-IOV interfaces\`
+              
+              2. **Common characteristics**:
+                 - Imperative mood (Add, Fix, Refactor, Remove, Update, Improve, Implement, Change, Move, Rename, Clean, Simplify, Optimize, Enable, Disable, Support, Handle, Create, Delete, Modify)
+                 - First word capitalized (required)
+                 - First line length: max 72 characters (recommended: ≤50 characters)
+                 - Descriptive and clear (minimum 10 characters, avoid generic words like "stuff", "things", "fix", "update", "change", "modify")
+                 - Signed-off-by line present (DCO compliance)
+              
+              3. **Alignment validation** - Verify that commit messages accurately describe the code changes:
+                 - Compare commit message content with actual code changes
+                 - Identify commits where the message doesn't match the changes (similarity threshold: <30% indicates mismatch)
+                 - Flag commits with misleading or incorrect descriptions
+              
+              ## Expected Output Format
+              
+              Please post a regular PR comment (not an inline review comment) with:
+              
+              - **Summary**: Overall format compliance status
+              - **Format Issues**: List specific commits that don't follow the patterns above
+              - **Alignment Issues**: List commits where the message doesn't match code changes
+              - **Recommendations**: Provide short examples of improved commit messages for problematic commits
+              
+              ## Important Notes
+              
+              - Analyze ALL commits in the PR (up to 20 commits)
+              - Post your analysis as a regular comment and stop (no confirmation messages needed)
+              - Focus on actionable feedback with specific examples
+              - Be constructive and helpful
+            </details>`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: codeRabbitComment
+            });
