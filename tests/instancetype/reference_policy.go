@@ -34,7 +34,7 @@ var _ = Describe("[crit:medium][vendor:cnv-qe@redhat.com][level:component][sig-c
 			virtClient = kubevirt.Client()
 		})
 
-		DescribeTable("should result in running VirtualMachine when set to", func(policy virtv1.InstancetypeReferencePolicy) {
+		DescribeTable("[test_id:1234]should result in running VirtualMachine when set to", func(policy virtv1.InstancetypeReferencePolicy) {
 			kv := libkubevirt.GetCurrentKv(virtClient)
 			kv.Spec.Configuration.Instancetype = &virtv1.InstancetypeConfiguration{
 				ReferencePolicy: pointer.P(policy),

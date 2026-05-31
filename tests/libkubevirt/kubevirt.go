@@ -37,6 +37,7 @@ func GetCurrentKv(virtClient kubecli.KubevirtClient) *v1.KubeVirt {
 	return &kvs[0]
 }
 
+# to be deprecated
 func GetKvList(virtClient kubecli.KubevirtClient) []v1.KubeVirt {
 	var kvList *v1.KubeVirtList
 	var err error
